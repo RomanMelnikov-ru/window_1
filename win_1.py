@@ -7,12 +7,12 @@ st.title("Распределение точек на линии")
 
 # Ввод параметров через Streamlit
 st.sidebar.header("Параметры")
-L = st.sidebar.number_input("Длина линии (м)", value=3.0, min_value=1.0, step=0.1)
-edge_point_distance = st.sidebar.number_input("Расстояние от края до первой точки (м)", value=0.16, min_value=0.0, step=0.01)
-min_distance_red = st.sidebar.number_input("Минимальное расстояние между красными точками (м)", value=0.45, min_value=0.0, step=0.01)
-max_distance_red = st.sidebar.number_input("Максимальное расстояние между красными точками (м)", value=0.65, min_value=0.0, step=0.01)
-min_distance_between_old_new = st.sidebar.number_input("Минимальное расстояние между красными и синими точками (м)", value=0.04, min_value=0.0, step=0.01)
-num_new_points = st.sidebar.number_input("Количество новых точек", value=4, min_value=1, step=1)
+L = st.sidebar.number_input("Длина профиля (м)", value=3.0, min_value=1.0, step=0.1)
+edge_point_distance = st.sidebar.number_input("Расстояние от края профиля до водоотливного отверстия (м)", value=0.16, min_value=0.0, step=0.01)
+min_distance_red = st.sidebar.number_input("Минимальное расстояние между водоотливными отверстиями (м)", value=0.45, min_value=0.0, step=0.01)
+max_distance_red = st.sidebar.number_input("Максимальное расстояние между водоотливными отверстиями (м)", value=0.65, min_value=0.0, step=0.01)
+min_distance_between_old_new = st.sidebar.number_input("Минимальное расстояние между водоотливными отверстиями и осью импоста (м)", value=0.04, min_value=0.0, step=0.01)
+num_new_points = st.sidebar.number_input("Количество импостов", value=4, min_value=1, step=1)
 
 # Центральная точка
 center_point = L / 2
@@ -102,13 +102,13 @@ for i in range(len(red_points) - 1):
     ax.text(mid_point, 0.05, f'{distance:.2f}m', ha='center', color='red')
 
 ax.set_yticks([])
-ax.set_xlabel('Длина линии (м)')
-ax.set_title('Распределение точек на линии')
+ax.set_xlabel('Длина прошиля (м)')
+ax.set_title('Распределение водоотливных отверстий и осей импостов')
 ax.grid(True)
 
 # Отображение графика в Streamlit
 st.pyplot(fig)
 
 # Вывод списка точек
-st.write("Красные точки:", red_points)
-st.write("Синие точки:", blue_points)
+st.write("водоотливные отверстия:", red_points)
+st.write("Оси импостов:", blue_points)
