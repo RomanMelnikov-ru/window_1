@@ -11,7 +11,7 @@ L = st.sidebar.number_input("Длина профиля (м)", value=3.0, min_val
 edge_point_distance = st.sidebar.number_input("Расстояние от края профиля до водоотливного отверстия (м)", value=0.16, min_value=0.0, step=0.01)
 min_distance_red = st.sidebar.number_input("Минимальное расстояние между водоотливными отверстиями (м)", value=0.45, min_value=0.0, step=0.01)
 max_distance_red = st.sidebar.number_input("Максимальное расстояние между водоотливными отверстиями (м)", value=0.65, min_value=0.0, step=0.01)
-min_distance_between_old_new = st.sidebar.number_input("Минимальное расстояние между водоотливными отверстиями и осью импоста (м)", value=0.04, min_value=0.0, step=0.01)
+min_distance_between_old_new = st.sidebar.number_input("Минимальное расстояние между водоотливным отверстием и осью импоста (м)", value=0.04, min_value=0.0, step=0.01)
 num_new_points = st.sidebar.number_input("Количество импостов", value=4, min_value=1, step=1)
 
 # Центральная точка
@@ -102,12 +102,12 @@ for i in range(len(red_points) - 1):
     ax.text(mid_point, 0.05, f'{distance:.2f}m', ha='center', color='red')
 
 ax.set_yticks([])
-ax.set_xlabel('Длина прошиля (м)')
+ax.set_xlabel('Длина профиля (м)')
 ax.grid(True)
 
 # Отображение графика в Streamlit
 st.pyplot(fig)
 
 # Вывод списка точек
-st.write("водоотливные отверстия:", red_points)
+st.write("Водоотливные отверстия:", red_points)
 st.write("Оси импостов:", blue_points)
