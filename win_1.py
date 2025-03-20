@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Заголовок приложения
-st.title("Распределение точек на линии")
+st.title("Распределение водоотливных отверстий и осей импостов")
 
 # Ввод параметров через Streamlit
 st.sidebar.header("Параметры")
@@ -103,7 +103,6 @@ for i in range(len(red_points) - 1):
 
 ax.set_yticks([])
 ax.set_xlabel('Длина прошиля (м)')
-ax.set_title('Распределение водоотливных отверстий и осей импостов')
 ax.grid(True)
 
 # Отображение графика в Streamlit
