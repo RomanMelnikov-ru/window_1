@@ -4,128 +4,119 @@ import plotly.graph_objects as go
 # Заголовок приложения
 st.title("Визуализация оконного профиля с импостами и водоотливными отверстиями")
 
-# Ввод исходных данных
-st.sidebar.header("Исходные данные")
-L = st.sidebar.number_input("Длина профиля (м):", min_value=1.0, value=3.0, step=0.1)
-num_points = st.sidebar.number_input("Количество импостов:", min_value=1, value=2, step=1)
-min_drainage_spacing = st.sidebar.number_input("Минимальное расстояние между водоотливными отверстиями (м):", min_value=0.1, value=0.45, step=0.05)
-max_drainage_spacing = st.sidebar.number_input("Максимальное расстояние между водоотливными отверстиями (м):", min_value=0.1, value=0.65, step=0.05)
-min_distance_to_impost = st.sidebar.number_input("Минимальное расстояние между импостом и водоотливным отверстием (м):", min_value=0.01, value=0.04, step=0.01)
+# Ввод данных
+L = 3.0  # Длина профиля
+num_points = st.number_input("Введите количество точек (импостов):", min_value=1, value=4, step=1)
+min_drain_dist = st.number_input("Минимальное расстояние между водоотливными точками (м):", min_value=0.1, value=0.45, step=0.01)
+max_drain_dist = st.number_input("Максимальное расстояние между водоотливными точками (м):", min_value=0.1, value=0.65, step=0.01)
+min_distance_to_impost = st.number_input("Минимальное расстояние от водоотливной точки до импоста (м):", min_value=0.04, value=0.04, step=0.01)
 
-# Фиксированные точки импостов
-imposts = [i * L / (num_points + 1) for i in range(1, num_points + 1)]
-imposts = [0.0] + imposts + [L]  # Добавляем начальную и конечную точки
+# Равномерное распределение точек (импостов)
+points_imposts = [L * (i + 1) / (num_points + 1) for i in range(num_points)]
 
-# Функция для создания водоотливных отверстий с учётом ограничений
-def create_drainage_points(imposts, L, min_drainage_spacing, max_drainage_spacing, min_distance_to_impost):
-    drainage_points = []
+# Добавление водоотливных отверстий
+points_drain = [0.16, L - 0.16]  # Крайние точки
+if num_points % 2 == 0:  # Если количество импостов четное, добавляем точку по середине
+    points_drain.append(L / 2)
 
-    # Добавляем точки по краям на расстоянии 0.16 м, если они не слишком близко к импостам
-    if abs(0.16 - imposts[0]) >= min_distance_to_impost:
-        drainage_points.append(0.16)
-    if abs(L - 0.16 - imposts[-1]) >= min_distance_to_impost:
-        drainage_points.append(L - 0.16)
+# Функция для корректировки положения точек
+def adjust_point_position(point, points_imposts, min_distance=0.04):
+    for impost in points_imposts:
+        if abs(point - impost) < min_distance:
+            # Корректируем положение точки
+            if point < impost:
+                point = impost - min_distance
+            else:
+                point = impost + min_distance
+    return point
 
-    # Если количество импостов чётное, добавляем точку по центру, если она не слишком близко к импостам
-    if num_points % 2 == 0:
-        center = L / 2
-        too_close = any(abs(center - impost) < min_distance_to_impost for impost in imposts)
-        if not too_close:
-            drainage_points.append(center)
+# Функция для добавления дополнительных водоотливных точек
+def add_additional_drain_points(points, points_imposts, min_dist=0.45, max_dist=0.65, min_distance_to_impost=0.04):
+    points.sort()  # Сортируем точки
+    new_points = []
+    for i in range(len(points) - 1):
+        start = points[i]
+        end = points[i + 1]
+        distance = end - start
+        if distance > max_dist:
+            # Добавляем точки симметрично
+            num_new_points = int(distance // max_dist)
+            spacing = distance / (num_new_points + 1)
+            for j in range(1, num_new_points + 1):
+                new_point = start + j * spacing
+                # Корректируем положение точки, если она слишком близко к импосту
+                new_point = adjust_point_position(new_point, points_imposts, min_distance_to_impost)
+                new_points.append(new_point)
+    # Добавляем новые точки в общий список и сортируем
+    points.extend(new_points)
+    points.sort()
 
-    # Распределяем точки на остальных участках
-    for i in range(len(imposts) - 1):
-        start = imposts[i] + min_distance_to_impost
-        end = imposts[i + 1] - min_distance_to_impost
-        segment_length = end - start
-
-        # Если длина отрезка позволяет добавить точки
-        if segment_length >= min_drainage_spacing:
-            # Количество точек на отрезке
-            num_drainage = int(segment_length // max_drainage_spacing)
-            if num_drainage > 0:
-                # Равномерное распределение точек
-                spacing = segment_length / (num_drainage + 1)
-                for j in range(1, num_drainage + 1):
-                    point = start + j * spacing
-                    # Проверяем, что точка не слишком близко к другим водоотливным отверстиям
-                    if all(abs(point - dp) >= min_drainage_spacing for dp in drainage_points):
-                        drainage_points.append(point)
-
-    # Убираем дубликаты и сортируем
-    drainage_points = sorted(list(set(drainage_points)))
-    return drainage_points
-
-# Создаём водоотливные отверстия
-drainage_points = create_drainage_points(imposts, L, min_drainage_spacing, max_drainage_spacing, min_distance_to_impost)
+# Добавляем дополнительные водоотливные точки
+add_additional_drain_points(points_drain, points_imposts, min_drain_dist, max_drain_dist, min_distance_to_impost)
 
 # Создание графика
 fig = go.Figure()
 
-# Добавление линии (оконный профиль)
+# Добавление линии профиля
 fig.add_trace(go.Scatter(
-    x=imposts,
-    y=[0] * len(imposts),
-    mode='lines+markers',
-    line=dict(color='blue'),
-    marker=dict(color='red', size=10),
-    name='Импосты'
+    x=[0, L], y=[0, 0],
+    mode='lines',
+    line=dict(color='blue', width=2),
+    name='Оконный профиль'
 ))
+
+# Добавление линий высотой 1.0 м от точек импостов
+for point in points_imposts:
+    fig.add_trace(go.Scatter(
+        x=[point, point], y=[0, 0.5],
+        mode='lines',
+        line=dict(color='red', width=2),
+        name='Линия от импоста'
+    ))
+
+# Добавление точек (импостов)
+for point in points_imposts:
+    fig.add_trace(go.Scatter(
+        x=[point], y=[0],
+        mode='markers+text',
+        marker=dict(color='red', size=10),
+        text=[f"({point:.2f}, 0)"],
+        textposition="top center",
+        name='Импост'
+    ))
 
 # Добавление водоотливных отверстий
-fig.add_trace(go.Scatter(
-    x=drainage_points,
-    y=[0] * len(drainage_points),
-    mode='markers',
-    marker=dict(color='green', size=10),
-    name='Водоотливные отверстия'
-))
+for point in points_drain:
+    fig.add_trace(go.Scatter(
+        x=[point], y=[0],
+        mode='markers+text',
+        marker=dict(color='blue', size=10),
+        text=[f"({point:.2f}, 0)"],
+        textposition="bottom center",
+        name='Водоотливное отверстие'
+    ))
 
-# Добавление подписей координат для импостов
-for i, point in enumerate(imposts):
+# Добавление подписей расстояний между водоотливными точками
+for i in range(len(points_drain) - 1):
+    start = points_drain[i]
+    end = points_drain[i + 1]
+    distance = end - start
+    midpoint = (start + end) / 2
     fig.add_annotation(
-        x=point,
-        y=0.2,
-        text=f"{point:.2f} м",
-        showarrow=False,
-        font=dict(size=12, color="red"),
-        yshift=10
-    )
-
-# Добавление подписей координат для водоотливных отверстий
-for i, point in enumerate(drainage_points):
-    fig.add_annotation(
-        x=point,
-        y=-0.2,
-        text=f"{point:.2f} м",
-        showarrow=False,
-        font=dict(size=12, color="green"),
-        yshift=-10
-    )
-
-# Добавление подписей расстояний между водоотливными отверстиями
-for i in range(len(drainage_points) - 1):
-    distance = drainage_points[i + 1] - drainage_points[i]
-    midpoint = (drainage_points[i] + drainage_points[i + 1]) / 2
-    fig.add_annotation(
-        x=midpoint,
-        y=-0.1,
+        x=midpoint, y=0.1,
         text=f"{distance:.2f} м",
         showarrow=False,
-        font=dict(size=12, color="black"),
-        yshift=-20
+        font=dict(size=12, color="black")
     )
 
 # Настройка внешнего вида графика
 fig.update_layout(
-    title="Распределение импостов и водоотливных отверстий",
-    xaxis_title="Длина, м",
-    yaxis_title="",
-    showlegend=True,
-    yaxis=dict(showticklabels=False),
-    height=600,
-    margin=dict(l=40, r=40, t=40, b=40)
+    xaxis=dict(range=[-0.1, L + 0.1], showgrid=False),
+    yaxis=dict(range=[-0.2, 1.2], showgrid=False, zeroline=True),
+    showlegend=False,
+    height=500,
+    margin=dict(l=20, r=20, t=40, b=20)
 )
 
-# Отображение графика в Streamlit
+# Отображение графика
 st.plotly_chart(fig)
