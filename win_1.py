@@ -1,113 +1,128 @@
 import streamlit as st
-import numpy as np
-import matplotlib.pyplot as plt
+import plotly.graph_objects as go
 
-# Заголовок приложения
-st.title("Распределение водоотливных отверстий и осей импостов")
+# Функция для построения графика
+def plot_graph(L, edge_distance, min_distance, max_distance, num_new_points, min_distance_to_new_points):
+    # Центр линии
+    center = L / 2
 
-# Ввод параметров через Streamlit
-st.sidebar.header("Параметры")
-L = st.sidebar.number_input("Длина профиля (м)", value=3.0, min_value=1.0, step=0.1)
-edge_point_distance = st.sidebar.number_input("Расстояние от края профиля до водоотливного отверстия (м)", value=0.16, min_value=0.0, step=0.01)
-min_distance_red = st.sidebar.number_input("Минимальное расстояние между водоотливными отверстиями (м)", value=0.45, min_value=0.0, step=0.01)
-max_distance_red = st.sidebar.number_input("Максимальное расстояние между водоотливными отверстиями (м)", value=0.65, min_value=0.0, step=0.01)
-min_distance_between_old_new = st.sidebar.number_input("Минимальное расстояние между водоотливным отверстием и осью импоста (м)", value=0.04, min_value=0.0, step=0.01)
-num_new_points = st.sidebar.number_input("Количество импостов", value=4, min_value=1, step=1)
+    # Новая группа точек
+    new_points = [round(i * L / (num_new_points + 1), 2) for i in range(1, num_new_points + 1)]
 
-# Центральная точка
-center_point = L / 2
+    # Блок для четного количества новых точек
+    if num_new_points % 2 == 0:
+        points = [edge_distance, center, L - edge_distance]
+        distance_between_edge_and_center = center - edge_distance
+        desired_distance = (min_distance + max_distance) / 2
+        num_additional_points = int(distance_between_edge_and_center / desired_distance)
+        uniform_distance = distance_between_edge_and_center / (num_additional_points + 1)
+        uniform_distance = round(uniform_distance, 2)
 
-# Точки от краев
-left_edge_point = edge_point_distance
-right_edge_point = L - edge_point_distance
+        current_position = edge_distance
+        for _ in range(num_additional_points):
+            current_position += uniform_distance
+            points.append(current_position)
 
-# Список для хранения всех красных точек
-red_points = [left_edge_point, center_point, right_edge_point]
+        points_right = [L - p for p in points if p < center]
+        points.extend(points_right)
+        points = sorted(points)
 
-# Расстояние между крайней точкой и центральной
-distance_between_edge_and_center = center_point - left_edge_point
+    # Блок для нечетного количества новых точек
+    else:
+        points = [edge_distance, L - edge_distance]
+        distance_between_edges = L - 2 * edge_distance
+        desired_distance = (min_distance + max_distance) / 2
+        num_additional_points = int(distance_between_edges / desired_distance)
+        uniform_distance = distance_between_edges / (num_additional_points + 1)
+        uniform_distance = round(uniform_distance, 2)
 
-# Количество дополнительных красных точек
-num_additional_points = int(distance_between_edge_and_center / max_distance_red)
+        current_position = edge_distance
+        for _ in range(num_additional_points // 2):
+            current_position += uniform_distance
+            points.append(current_position)
 
-# Расстояние между дополнительными красными точками
-additional_point_distance = distance_between_edge_and_center / (num_additional_points + 1)
+        current_position = L - edge_distance
+        for _ in range(num_additional_points // 2):
+            current_position -= uniform_distance
+            points.append(current_position)
 
-# Добавление дополнительных красных точек
-for i in range(1, num_additional_points + 1):
-    red_points.append(left_edge_point + i * additional_point_distance)
-    red_points.append(right_edge_point - i * additional_point_distance)
+        points = sorted(points)
 
-# Сортировка красных точек
-red_points.sort()
-
-# Округление до 0.01 м
-red_points = [round(point, 2) for point in red_points]
-
-# Равномерное распределение синих точек
-blue_points = np.linspace(0, L, num_new_points + 2)[1:-1]  # Исключаем края, так как они уже есть
-blue_points = [round(point, 2) for point in blue_points]
-
-# Функция для проверки и корректировки красных точек
-def adjust_red_points(red_points, blue_points, min_distance_red, max_distance_red, min_distance_between_old_new):
-    # Проверка расстояния между красными и синими точками
-    for blue_point in blue_points:
-        for i in range(len(red_points)):
-            if abs(red_points[i] - blue_point) < min_distance_between_old_new:
-                # Смещаем красную точку вправо или влево
-                if red_points[i] < blue_point:
-                    red_points[i] = blue_point - min_distance_between_old_new
+    # Корректировка основных точек
+    for i in range(len(points)):
+        for new_point in new_points:
+            if abs(points[i] - new_point) < min_distance_to_new_points:
+                if points[i] < new_point:
+                    points[i] = new_point - min_distance_to_new_points
                 else:
-                    red_points[i] = blue_point + min_distance_between_old_new
-                # Округляем до 0.01 м
-                red_points[i] = round(red_points[i], 2)
+                    points[i] = new_point + min_distance_to_new_points
+                points[i] = round(points[i], 2)
 
-    # Проверка расстояния между красными точками
-    for i in range(len(red_points) - 1):
-        distance = red_points[i + 1] - red_points[i]
-        if distance < min_distance_red:
-            # Смещаем правую точку вправо
-            red_points[i + 1] = red_points[i] + min_distance_red
-            red_points[i + 1] = round(red_points[i + 1], 2)
-        elif distance > max_distance_red:
-            # Добавляем новую точку посередине
-            new_point = (red_points[i] + red_points[i + 1]) / 2
-            red_points.insert(i + 1, round(new_point, 2))
+    # Убедимся, что точки не выходят за границы линии
+    points = [max(min(p, L - edge_distance), edge_distance) for p in points]
 
-    # Убедимся, что точки не выходят за пределы линии
-    red_points = [max(min(point, L), 0) for point in red_points]
-    return red_points
+    # Создание графика с помощью Plotly
+    fig = go.Figure()
 
-# Корректировка красных точек
-red_points = adjust_red_points(red_points, blue_points, min_distance_red, max_distance_red, min_distance_between_old_new)
+    # Линия
+    fig.add_trace(go.Scatter(
+        x=[0, L], y=[0, 0], mode='lines', line=dict(color='black', width=2), name='Линия'
+    ))
+
+    # Основные точки
+    fig.add_trace(go.Scatter(
+        x=points, y=[0] * len(points), mode='markers', marker=dict(color='blue', size=10), name='Основные точки'
+    ))
+
+    # Новые точки
+    fig.add_trace(go.Scatter(
+        x=new_points, y=[0] * len(new_points), mode='markers', marker=dict(color='red', size=10), name='Новые точки'
+    ))
+
+    # Подписи для основных точек
+    for p in points:
+        fig.add_annotation(
+            x=p, y=-0.02, text=f'{p:.2f}m', showarrow=False, font=dict(color='blue', size=10), yshift=10
+        )
+
+    # Подписи для новых точек
+    for p in new_points:
+        fig.add_annotation(
+            x=p, y=0.02, text=f'{p:.2f}m', showarrow=False, font=dict(color='red', size=10), yshift=10
+        )
+
+    # Подписи расстояний между основными точками
+    for i in range(len(points) - 1):
+        distance = points[i + 1] - points[i]
+        mid_point = (points[i] + points[i + 1]) / 2
+        fig.add_annotation(
+            x=mid_point, y=0.03, text=f'{distance:.2f}m', showarrow=False, font=dict(color='green', size=10), yshift=10
+        )
+
+    # Настройка графика
+    fig.update_layout(
+        xaxis=dict(range=[0, L], showgrid=False),
+        yaxis=dict(range=[-0.1, 0.1], showgrid=False, showticklabels=False),
+        showlegend=True,
+        title='Распределение точек на линии',
+        height=400,
+        margin=dict(l=20, r=20, t=40, b=20)
+    )
+
+    return fig
+
+# Интерфейс Streamlit
+st.title("Распределение точек на линии")
+
+# Ввод данных
+L = st.number_input("Длина линии (L):", value=3.0, min_value=0.1, step=0.1)
+edge_distance = st.number_input("Расстояние от края до точки:", value=0.16, min_value=0.01, step=0.01)
+min_distance = st.number_input("Минимальное расстояние между точками:", value=0.45, min_value=0.01, step=0.01)
+max_distance = st.number_input("Максимальное расстояние между точками:", value=0.65, min_value=0.01, step=0.01)
+num_new_points = st.number_input("Количество новых точек:", value=5, min_value=1, step=1)
+min_distance_to_new_points = st.number_input("Минимальное расстояние до новых точек:", value=0.04, min_value=0.01, step=0.01)
 
 # Построение графика
-fig, ax = plt.subplots(figsize=(10, 2))
-ax.plot([0, L], [0, 0], 'k-', linewidth=2)  # Линия
-
-# Отображение красных точек и подписей
-for point in red_points:
-    ax.plot(point, 0, 'ro')  # Красные точки
-    ax.text(point, 0.02, f'{point:.2f}m', ha='center')  # Подписи
-
-# Отображение синих точек и подписей
-for point in blue_points:
-    ax.plot(point, 0, 'bo')  # Синие точки
-    ax.text(point, -0.02, f'{point:.2f}m', ha='center', color='blue')  # Подписи
-
-# Отображение расстояний между красными точками
-for i in range(len(red_points) - 1):
-    distance = red_points[i + 1] - red_points[i]
-    mid_point = (red_points[i] + red_points[i + 1]) / 2
-    ax.text(mid_point, 0.05, f'{distance:.2f}m', ha='center', color='red')
-
-ax.set_yticks([])
-ax.set_xlabel('Длина профиля (м)')
-ax.grid(True)
-
-# Отображение графика в Streamlit
-st.pyplot(fig)
-
-# Вывод списка точек
-st.write("Водоотливные отверстия:", red_points)
-st.write("Оси импостов:", blue_points)
+if st.button("Построить график"):
+    fig = plot_graph(L, edge_distance, min_distance, max_distance, num_new_points, min_distance_to_new_points)
+    st.plotly_chart(fig, use_container_width=True)
