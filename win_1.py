@@ -112,7 +112,7 @@ for i in range(len(points_drain) - 1):
 # Настройка внешнего вида графика
 fig.update_layout(
     xaxis=dict(range=[-0.1, L + 0.1], showgrid=False),
-    yaxis=dict(range=[-0.2, 1.2], showgrid=False, zeroline=True),
+    yaxis=dict(range=[-0.2, 0.6], showgrid=False, zeroline=True),
     showlegend=False,
     height=500,
     margin=dict(l=20, r=20, t=40, b=20)
